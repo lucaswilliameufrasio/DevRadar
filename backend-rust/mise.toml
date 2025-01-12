@@ -1,0 +1,11 @@
+[tasks.setup]
+description = 'Setup the development environment'
+run = [
+    'cargo install -f cargo-upgrades',
+    'cargo install cargo-edit',
+    'cargo install cargo-watch',
+]
+
+[tasks.dev]
+description = 'Run project in dev mode'
+run = "RUST_LOG=debug cargo watch -x 'run'"
