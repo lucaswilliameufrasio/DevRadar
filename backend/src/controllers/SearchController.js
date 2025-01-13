@@ -2,11 +2,12 @@ const { knex } = require("@/helpers/knex");
 const parseStringAsArray = require("../utils/parseStringAsArray");
 
 module.exports = {
-  async index(req, res) {
+  async index(context) {
     // Buscar todos os devs num raio de 10km
     // Filtrar por tecnologias
-
-    const { latitude, longitude, techs } = req.query;
+    const latitude = context.req.query("latitude");
+    const longitude = context.req.query("longitude");
+    const techs = context.req.query("techs");
 
     const techsArray = parseStringAsArray(techs);
 
@@ -36,7 +37,7 @@ module.exports = {
 
     const devs = await query;
 
-    return res.json({
+    return context.json({
       devs: devs.map((dev) => ({
         ...dev,
         _id: dev.id,

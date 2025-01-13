@@ -1,4 +1,3 @@
-const axios = require("axios");
 const parseStringAsArray = require("../utils/parseStringAsArray");
 const getDevInformation = require("../utils/getDevInformation");
 const { findConnections, sendMessage } = require("../websocket");
@@ -9,10 +8,10 @@ const { isNullOrUndefined } = require("@/helpers/validation");
 //index: quando quero mostrar uma lista, show: quando quero mostrar um único registro, store: quando quero criar um registro, update: alterar registro,
 //destroy: deletar um registro
 module.exports = {
-  async index(req, res) {
+  async index(context) {
     const devs = await knex.table("devs").select("*");
 
-    return res.json(
+    return context.json(
       devs.map((dev) => ({
         ...dev,
         _id: dev.id,
@@ -21,9 +20,10 @@ module.exports = {
     );
   },
 
-  async store(req, res) {
+  async store(context) {
     try {
-      const { github_username, techs, latitude, longitude } = req.body;
+      const body = await context.req.json();
+      const { github_username, techs, latitude, longitude } = body;
 
       // Validate input
       if (
@@ -32,8 +32,8 @@ module.exports = {
         isNullOrUndefined(latitude) ||
         isNullOrUndefined(longitude)
       ) {
-        console.log("body", req.body);
-        return res.status(422).json({ message: "Missing parameters" });
+        console.log("body", context.req.body);
+        return context.json({ message: "Missing parameters" }, 422);
       }
 
       // Check if developer already exists
@@ -42,7 +42,7 @@ module.exports = {
         .first();
 
       if (foundDeveloper) {
-        return res.json({
+        return context.json({
           ...foundDeveloper,
           _id: foundDeveloper.id,
           techs: JSON.parse(foundDeveloper.techs),
@@ -51,7 +51,7 @@ module.exports = {
 
       // Fetch GitHub information
       const apiResponse = await getDevInformation(github_username);
-      const { name = github_username, avatar_url, bio } = apiResponse.data;
+      const { name = github_username, avatar_url, bio } = apiResponse;
 
       // Parse techs into an array
       const techsArray = parseStringAsArray(techs);
@@ -88,26 +88,26 @@ module.exports = {
       }
       sendMessage(sendSocketMessageTo, "new-dev", devMapped);
 
-      return res.json(devMapped);
+      return context.json(devMapped);
     } catch (error) {
       console.error("Error storing developer:", error);
-      return res.status(500).json({ message: "Something went wrong" });
+      return context.json({ message: "Something went wrong" }, 500);
     }
   },
 
-  async update(request, response) {
-    const { latitude, longitude } = request.body;
-    const { dev_id } = request.params;
+  async update(context) {
+    const { latitude, longitude } = context.req.body;
+    const developerId = context.req.param('dev_id');
 
     try {
       // Check if the dev exists
       const foundDeveloper = await knex
         .table("devs")
-        .where({ id: dev_id })
+        .where({ id: developerId })
         .first();
 
       if (!foundDeveloper) {
-        return response.status(404).json({ message: "User not found!" });
+        return context.json({ message: "User not found!" }, 404);
       }
 
       const { github_username } = foundDeveloper;
@@ -119,7 +119,7 @@ module.exports = {
       // Update the dev record
       const updatedDeveloper = await knex
         .table("devs")
-        .where({ id: dev_id })
+        .where({ id: developerId })
         .update({
           name,
           avatar_url,
@@ -131,28 +131,28 @@ module.exports = {
         })
         .returning("*");
 
-      return res.json({
+      return context.json({
         ...updatedDeveloper,
         _id: updatedDeveloper.id,
         techs: JSON.parse(updatedDeveloper.techs),
       });
     } catch (error) {
       logger.error("Failed to update dev", error);
-      return response.status(500).json({ message: "Internal server error" });
+      return context.json({ message: "Internal server error" }, 500);
     }
   },
 
-  async destroy(req, res) {
-    const { dev_id } = req.params;
+  async destroy(context) {
+    const dev_id = context.req.param('dev_id');
 
     const dev = await knex("devs").select("id").where("id", dev_id).first();
 
     if (!dev) {
-      return res.json({ message: "User not found!" });
+      return context.json({ message: "User not found!" });
     }
 
     await knex("devs").select("id").where("id", dev_id).delete();
 
-    return res.json({ message: "User deleted successfully!" });
+    return context.json({ message: "User deleted successfully!" });
   },
 };

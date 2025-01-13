@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "tsx watch -r dotenv/config src/index.js",
+    "dev": "tsx watch -r dotenv/config src/index.ts",
     "knex": "npx --node-options='-r tsx/cjs -r dotenv/config' knex",
     "migration:create": "npm run knex -- migrate:make --knexfile knexfile.ts -x ts",
     "migration:status": "npm run knex -- migrate:status --knexfile knexfile.ts",
@@ -18,11 +18,9 @@
     "check-lib-upgrades": "NPM_CHECK_INSTALLER=npm npx npm-check -u"
   },
   "dependencies": {
-    "axios": "^1.7.9",
+    "@hono/node-server": "^1.13.7",
     "better-sqlite3": "^11.7.2",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.17.1",
     "hono": "^4.6.16",
     "knex": "^3.1.0",
     "pino": "^9.6.0",
