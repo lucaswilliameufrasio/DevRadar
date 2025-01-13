@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "CommonJS",
+    "lib": ["ES2023"],
+    "resolveJsonModule": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "strict": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "noFallthroughCasesInSwitch": true,
+    "emitDecoratorMetadata": true,
+
+    "declaration": false,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strictPropertyInitialization": false,
+    "skipDefaultLibCheck": true,
+
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "rootDir": ".",
+    "outDir": "dist",
+
+    "paths": {
+      "@/tests/*": ["tests/*"],
+      "@/*": ["src/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+  ],
+  "exclude": ["node_modules", "dist/**/*", "coverage/**/*"]
+}

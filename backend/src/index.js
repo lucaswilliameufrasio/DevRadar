@@ -1,6 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
 const http = require("http");
 
@@ -18,11 +17,4 @@ app.use(express.json());
 
 app.use(routes);
 
-mongoose
-  .connect(env.MONGODB_URI)
-  .then(() => {
-    server.listen(env.PORT, () => console.log(`Listening on http://localhost:${env.PORT}`));
-  })
-  .catch((error) => {
-    console.error(error);
-  });
+server.listen(env.PORT, () => console.log(`Listening on http://localhost:${env.PORT}`))

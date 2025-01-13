@@ -4,14 +4,35 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "node --watch src/index.js"
+    "dev": "tsx watch -r dotenv/config src/index.js",
+    "knex": "npx --node-options='-r tsx/cjs -r dotenv/config' knex",
+    "migration:create": "npm run knex -- migrate:make --knexfile knexfile.ts -x ts",
+    "migration:status": "npm run knex -- migrate:status --knexfile knexfile.ts",
+    "migrate:up": "npm run knex -- --knexfile knexfile.ts migrate:up",
+    "migrate:down": "npm run knex -- --knexfile knexfile.ts migrate:down",
+    "migrate:latest": "npm run knex -- --knexfile knexfile.ts migrate:latest",
+    "migrate:rollback": "npm run knex -- --knexfile knexfile.ts migrate:rollback",
+    "migrate:drop": "npm run migrate:rollback --all",
+    "seed": "npm run knex -- --knexfile knexfile.ts seed:run",
+    "seed:create": "npm run knex -- seed:make --knexfile knexfile.ts -x ts",
+    "check-lib-upgrades": "NPM_CHECK_INSTALLER=npm npx npm-check -u"
   },
   "dependencies": {
     "axios": "^1.7.9",
+    "better-sqlite3": "^11.7.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.17.1",
+    "hono": "^4.6.16",
+    "knex": "^3.1.0",
     "mongoose": "^8.9.4",
+    "pino": "^9.6.0",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   }
 }
