@@ -12,7 +12,7 @@ module.exports = {
 
         const devs = await Dev.find({
             techs: {
-              $in: techsArray,  
+                $in: techsArray,
             },
             location: {
                 $near: {

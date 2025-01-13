@@ -4,17 +4,14 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "axios": "^0.21.2",
+    "axios": "^1.7.9",
     "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
+    "dotenv": "^16.4.7",
     "express": "^4.17.1",
-    "mongoose": "^5.11.8",
-    "socket.io": "^3.0.4"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.6"
+    "mongoose": "^8.9.4",
+    "socket.io": "^4.8.1"
   }
 }

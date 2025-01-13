@@ -19,11 +19,7 @@ app.use(express.json());
 app.use(routes);
 
 mongoose
-  .connect(env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-  })
+  .connect(env.MONGODB_URI)
   .then(() => {
     server.listen(env.PORT, () => console.log(`Listening on http://localhost:${env.PORT}`));
   })
