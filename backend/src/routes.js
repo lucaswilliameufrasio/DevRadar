@@ -10,6 +10,8 @@ routes.post('/devs', DevController.store);
 routes.put('/devs/:dev_id/update', DevController.update);
 routes.delete('/devs/:dev_id/delete', DevController.destroy);
 
+routes.get('/health-check', (_request, response) => response.json({ message: 'ok' }))
+
 routes.get('/search', SearchController.index);
 
 module.exports = routes;

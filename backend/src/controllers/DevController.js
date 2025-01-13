@@ -14,14 +14,18 @@ module.exports = {
     },
 
     async store(req, res) {
-        const { github_username, techs, latitude, longitude } = req.body;
+        try {
+            const { github_username, techs, latitude, longitude } = req.body;
 
-        let dev = await Dev.findOne({ github_username });
+            if (!github_username?.length || !techs?.length || !latitude || !longitude) {
+                return res.status(422).json({ message: 'Missing parameters' })
+            }
 
-        if (!dev) {
-            // const apiResponse = await axios.get(`https://api.github.com/users/${github_username}`);
+            const foundDeveloper = await Dev.findOne({ github_username });
 
-            // const { name = login, avatar_url, bio } = apiResponse.data;
+            if (foundDeveloper) {
+                return res.json(foundDeveloper)
+            }
 
             const apiResponse = await getDevInformation(github_username);
 
@@ -34,7 +38,7 @@ module.exports = {
                 coordinates: [longitude, latitude],
             }
 
-            dev = await Dev.create({
+            const createdDeveloper = await Dev.create({
                 github_username,
                 name,
                 avatar_url,
@@ -48,10 +52,12 @@ module.exports = {
                 techsArray,
             )
 
-            sendMessage(sendSocketMessageTo, 'new-dev', dev);
-        }
+            sendMessage(sendSocketMessageTo, 'new-dev', createdDeveloper);
 
-        return res.json(dev);
+            return res.json(createdDeveloper);
+        } catch (error) {
+            return res.status(500).json({ message: 'Something went wrong' })
+        }
     },
 
     async update(req, res) {

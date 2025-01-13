@@ -3,6 +3,7 @@
     "name": "mobile",
     "slug": "mobile",
     "privacy": "public",
+    "newArchEnabled": true,
     "platforms": [
       "ios",
       "android",
@@ -24,6 +25,14 @@
     ],
     "ios": {
       "supportsTablet": true
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
+      ]
+    ]
   }
 }

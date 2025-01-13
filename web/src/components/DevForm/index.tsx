@@ -1,31 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import './styles.css';
 
-function DevForm({ onSubmit }) {
+function DevForm({ onSubmit }: {
+  onSubmit: (data: {
+    github_username: string;
+    techs: string;
+    latitude: number;
+    longitude: number;
+  }) => Promise<void>
+}) {
   const [github_username, setGithubUsername] = useState('');
   const [techs, setTechs] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  const [latitude, setLatitude] = useState<number>(0);
+  const [longitude, setLongitude] = useState<number>(0);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('coordinates', position.coords)
         const { latitude, longitude } = position.coords;
 
         setLatitude(latitude);
         setLongitude(longitude);
       },
-      (err) => {
-        console.log(err);
+      (error) => {
+        console.log('Failed to load current position', error);
       },
-      {
-        timeout: 30000,
-      },
+      { enableHighAccuracy: false, maximumAge: 100, timeout: 50_000 },
     );
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
     await onSubmit({
       github_username,
@@ -39,7 +45,7 @@ function DevForm({ onSubmit }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={(event) => handleSubmit(event)}>
       <div className="input-block">
         <label htmlFor="github_username">Usuário do Github</label>
         <input
@@ -71,7 +77,7 @@ function DevForm({ onSubmit }) {
             id="latitude"
             required
             value={latitude}
-            onChange={e => setLatitude(e.target.value)}
+            onChange={(event) => setLatitude(event.target.value?.length ? Number(event.target.value) : 0)}
           />
         </div>
 
@@ -83,7 +89,7 @@ function DevForm({ onSubmit }) {
             id="longitude"
             required
             value={longitude}
-            onChange={e => setLongitude(e.target.value)}
+            onChange={(event) => setLongitude(event.target.value?.length ? Number(event.target.value) : 0)}
           />
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
-import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
+import { requestForegroundPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 
@@ -9,24 +9,36 @@ import api from '../services/api';
 import { connect, disconnect, subscribeToNewDevs } from '../services/socket';
 
 function Main({ navigation }) {
-    const [devs, setDevs] = useState([]);
+    const [developers, setDevelopers] = useState([]);
     const [currentRegion, setCurrentRegion] = useState(null);
     const [techs, setTechs] = useState('');
 
     useEffect(() => {
         async function loadInitialPosition() {
-            const { granted } = await requestPermissionsAsync();
+            try {
+                const { granted } = await requestForegroundPermissionsAsync();
+                console.log('Location permission was granted?', granted)
 
-            if (granted) {
-                const { coords } = await getCurrentPositionAsync({
-                    enableHighAccuracy: true,
-                });
+                if (granted) {
+                    const { coords } = await getCurrentPositionAsync({
+                        enableHighAccuracy: true,
+                    });
 
-                const { latitude, longitude } = coords;
+                    const { latitude, longitude } = coords;
+
+                    setCurrentRegion({
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.04,
+                        longitudeDelta: 0.04,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load initial position', error);
 
                 setCurrentRegion({
-                    latitude,
-                    longitude,
+                    latitude: 0,
+                    longitude: 0,
                     latitudeDelta: 0.04,
                     longitudeDelta: 0.04,
                 });
@@ -37,8 +49,17 @@ function Main({ navigation }) {
     }, []);
 
     useEffect(() => {
-        subscribeToNewDevs(dev => setDevs([...devs, dev]));
-    }, [devs]);
+        subscribeToNewDevs((developer) => {
+            console.debug('New developer in the house', developer)
+
+            if (!developer) {
+                return
+            }
+
+            setDevelopers([...developers, developer])
+        }
+        );
+    }, [developers]);
 
     function setupWebsocket() {
         disconnect();
@@ -53,18 +74,30 @@ function Main({ navigation }) {
     }
 
     async function loadDevs() {
-        const { latitude, longitude } = currentRegion;
-
-        const response = await api.get('/search', {
-            params: {
-                latitude,
-                longitude,
-                techs
+        try {
+            console.debug("Loading devs")
+            if (!currentRegion) {
+                console.log('Current location is not set');
+                return;
             }
-        });
 
-        setDevs(response.data.devs);
-        setupWebsocket();
+            const { latitude, longitude } = currentRegion;
+            console.debug("Current region", latitude, longitude)
+
+            const response = await api.get('/search', {
+                params: {
+                    latitude,
+                    longitude,
+                    techs
+                }
+            });
+            console.debug("Devs loaded response", response.status, response.data)
+
+            setDevelopers(response.data.devs);
+            setupWebsocket();
+        } catch (error) {
+            console.error('Failed to load devs', error)
+        }
     }
 
     function handleRegionChanged(region) {
@@ -72,7 +105,7 @@ function Main({ navigation }) {
     }
 
     if (!currentRegion) {
-        return null;
+        return <Text>Algo de errado não está certo</Text>;
     }
 
     return (
@@ -81,7 +114,7 @@ function Main({ navigation }) {
                 onRegionChangeComplete={handleRegionChanged}
                 initialRegion={currentRegion}
                 style={styles.map}>
-                {devs.map(dev => (
+                {developers.map((dev) => (
                     <Marker
                         key={dev._id}
                         coordinate={{
@@ -108,7 +141,7 @@ function Main({ navigation }) {
                     </Marker>
                 ))}
             </MapView>
-            
+
             <KeyboardAvoidingView
                 style={styles.searchFlexBox}
                 behavior="padding"
