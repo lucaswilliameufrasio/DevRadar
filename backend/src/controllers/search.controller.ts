@@ -1,8 +1,9 @@
-const { knex } = require("@/helpers/knex");
-const parseStringAsArray = require("../utils/parseStringAsArray");
+import { knex } from "@/helpers/knex";
+import { parseStringAsArray } from "../helpers/data-manipulation";
+import { Context } from "hono";
 
-module.exports = {
-  async index(context) {
+export = {
+  async index(context: Context) {
     // Buscar todos os devs num raio de 10km
     // Filtrar por tecnologias
     const latitude = context.req.query("latitude");

@@ -1,14 +1,13 @@
-const parseStringAsArray = require("../utils/parseStringAsArray");
-const getDevInformation = require("../utils/getDevInformation");
-const { findConnections, sendMessage } = require("../websocket");
-const { knex } = require("@/helpers/knex");
-const { logger } = require("@/helpers/logger");
-const { isNullOrUndefined } = require("@/helpers/validation");
+import { parseStringAsArray } from "../helpers/data-manipulation";
+import { findGithubProfileByUsername } from "../helpers/github";
+import { findConnections, sendMessage } from "../websocket";
+import { knex } from "@/helpers/knex";
+import { logger } from "@/helpers/logger";
+import { isNullOrUndefined } from "@/helpers/validation";
+import { Context } from "hono";
 
-//index: quando quero mostrar uma lista, show: quando quero mostrar um único registro, store: quando quero criar um registro, update: alterar registro,
-//destroy: deletar um registro
-module.exports = {
-  async index(context) {
+export = {
+  async index(context: Context) {
     const devs = await knex.table("devs").select("*");
 
     return context.json(
@@ -20,7 +19,7 @@ module.exports = {
     );
   },
 
-  async store(context) {
+  async store(context: Context) {
     try {
       const body = await context.req.json();
       const { github_username, techs, latitude, longitude } = body;
@@ -32,7 +31,7 @@ module.exports = {
         isNullOrUndefined(latitude) ||
         isNullOrUndefined(longitude)
       ) {
-        console.log("body", context.req.body);
+        console.log("Invalid request body", body);
         return context.json({ message: "Missing parameters" }, 422);
       }
 
@@ -50,7 +49,7 @@ module.exports = {
       }
 
       // Fetch GitHub information
-      const apiResponse = await getDevInformation(github_username);
+      const apiResponse = await findGithubProfileByUsername(github_username);
       const { name = github_username, avatar_url, bio } = apiResponse;
 
       // Parse techs into an array
@@ -85,7 +84,7 @@ module.exports = {
         location: {
           coordinates: [createdDeveloper.longitude, createdDeveloper.latitude],
         },
-      }
+      };
       sendMessage(sendSocketMessageTo, "new-dev", devMapped);
 
       return context.json(devMapped);
@@ -95,9 +94,9 @@ module.exports = {
     }
   },
 
-  async update(context) {
-    const { latitude, longitude } = context.req.body;
-    const developerId = context.req.param('dev_id');
+  async update(context: Context) {
+    const { latitude, longitude } = await context.req.json();
+    const developerId = context.req.param("dev_id");
 
     try {
       // Check if the dev exists
@@ -113,8 +112,8 @@ module.exports = {
       const { github_username } = foundDeveloper;
 
       // Fetch GitHub information
-      const apiResponse = await getDevInformation(github_username);
-      const { name = github_username, avatar_url, bio } = apiResponse.data;
+      const apiResponse = await findGithubProfileByUsername(github_username);
+      const { name = github_username, avatar_url, bio } = apiResponse;
 
       // Update the dev record
       const updatedDeveloper = await knex
@@ -129,7 +128,10 @@ module.exports = {
             coordinates: [longitude, latitude],
           }),
         })
-        .returning("*");
+        .returning<{
+          id: number,
+          techs: string
+        }>("*");
 
       return context.json({
         ...updatedDeveloper,
@@ -137,13 +139,13 @@ module.exports = {
         techs: JSON.parse(updatedDeveloper.techs),
       });
     } catch (error) {
-      logger.error("Failed to update dev", error);
+      logger.error("Failed to update developer", error);
       return context.json({ message: "Internal server error" }, 500);
     }
   },
 
-  async destroy(context) {
-    const dev_id = context.req.param('dev_id');
+  async destroy(context: Context) {
+    const dev_id = context.req.param("dev_id");
 
     const dev = await knex("devs").select("id").where("id", dev_id).first();
 

@@ -4,7 +4,7 @@ import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { setupWebsocket } from "./websocket";
 import { routes } from "./routes";
-import env from "./config/env";
+import { env } from "./config/env";
 
 const app = new Hono();
 const server = serve(
@@ -20,4 +20,3 @@ setupWebsocket(server as HttpServer);
 app.use("*", cors());
 
 app.route("", routes);
-

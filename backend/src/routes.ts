@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 
-import DevController from './controllers/DevController'
-import SearchController from './controllers/SearchController'
+import DevController from './controllers/dev.controller'
+import SearchController from './controllers/search.controller'
 
 export const routes = new Hono();
 
