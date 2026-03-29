@@ -5,8 +5,10 @@ import { requestForegroundPermissionsAsync, getCurrentPositionAsync } from 'expo
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 
-import api from '../services/api';
+import api, { HttpClient } from '../services/api';
 import { connect, disconnect, subscribeToNewDevs } from '../services/socket';
+
+const httpClient = new HttpClient();
 
 function Main({ navigation }) {
     const [developers, setDevelopers] = useState([]);
@@ -84,16 +86,17 @@ function Main({ navigation }) {
             const { latitude, longitude } = currentRegion;
             console.debug("Current region", latitude, longitude)
 
-            const response = await api.get('/search', {
-                params: {
+            const response = await httpClient.request({
+                path: 'search',
+                query: {
                     latitude,
                     longitude,
                     techs
                 }
             });
-            console.debug("Devs loaded response", response.status, response.data)
+            console.debug("Devs loaded response", response.statusCode, response.body)
 
-            setDevelopers(response.data.devs);
+            setDevelopers(response.body);
             setupWebsocket();
         } catch (error) {
             console.error('Failed to load devs', error)
@@ -116,10 +119,10 @@ function Main({ navigation }) {
                 style={styles.map}>
                 {developers.map((dev) => (
                     <Marker
-                        key={dev._id}
+                        key={dev.id}
                         coordinate={{
-                            longitude: dev.location.coordinates[0],
-                            latitude: dev.location.coordinates[1],
+                            longitude: dev.longitude,
+                            latitude: dev.latitude,
                         }}
                     >
                         <Image

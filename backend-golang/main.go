@@ -1,137 +1,108 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"math"
 	"net/http"
+	"strings"
 	"sync"
-	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/bytedance/sonic"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tidwall/rtree"
 )
 
+type Dev struct {
+	ID             int      `json:"id"`
+	GithubUsername string   `json:"github_username"`
+	Name           string   `json:"name"`
+	AvatarURL      string   `json:"avatar_url"`
+	Bio            string   `json:"bio"`
+	Techs          []string `json:"techs"`
+}
+
 type AppState struct {
-	Clients     map[string]ClientLocation
-	Points      []Point
-	SseChannels map[string]chan string
-	Mutex       sync.Mutex
-}
-
-type Point struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type ClientLocation struct {
-	Latitude  float64
-	Longitude float64
-}
-
-type RegisterClientRequest struct {
-	ClientID  string  `json:"client_id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	DB           *pgxpool.Pool
+	SpatialIndex *rtree.RTree
+	SpatialMutex sync.RWMutex
 }
 
 func main() {
-	r := gin.Default()
-	state := &AppState{
-		Clients:     make(map[string]ClientLocation),
-		Points:      []Point{},
-		SseChannels: make(map[string]chan string),
-	}
+	dbPool, _ := pgxpool.New(context.Background(), "postgresql://postgres:postgres@localhost:5432/devradar")
+	state := &AppState{DB: dbPool, SpatialIndex: &rtree.RTree{}}
 
-	r.POST("/register", func(c *gin.Context) {
-		var req RegisterClientRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+type ApiError struct {
+	Message   string      `json:"message"`
+	ErrorCode string      `json:"error_code"`
+	Extra     interface{} `json:"extra,omitempty"`
+}
 
-		state.Mutex.Lock()
-		state.Clients[req.ClientID] = ClientLocation{
-			Latitude:  req.Latitude,
-			Longitude: req.Longitude,
-		}
-		state.SseChannels[req.ClientID] = make(chan string, 10)
-		state.Mutex.Unlock()
-
-		fmt.Printf("Registered client `%s` at (%f, %f)\n", req.ClientID, req.Latitude, req.Longitude)
-		c.JSON(http.StatusOK, gin.H{"message": "Client registered"})
+func sendError(w http.ResponseWriter, code int, message, errCode string, extra interface{}) {
+	w.WriteHeader(code)
+	sonic.ConfigDefault.NewEncoder(w).Encode(ApiError{
+		Message:   message,
+		ErrorCode: errCode,
+		Extra:     extra,
 	})
+}
 
-	r.POST("/points", func(c *gin.Context) {
-		var point Point
-		if err := c.ShouldBindJSON(&point); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		state.Mutex.Lock()
-		state.Points = append(state.Points, point)
-		for clientID, loc := range state.Clients {
-			distance := haversineDistance(loc.Latitude, loc.Longitude, point.Latitude, point.Longitude)
-			if distance < 2.0 {
-				if ch, ok := state.SseChannels[clientID]; ok {
-					message := fmt.Sprintf("New point added: (%f, %f)", point.Latitude, point.Longitude)
-					select {
-					case ch <- message:
-					default:
-						fmt.Printf("Client `%s` channel full, skipping\n", clientID)
-					}
-				}
+func main() {
+...
+	r.Route("/v1", func(v1 chi.Router) {
+		v1.Get("/devs", func(w http.ResponseWriter, r *http.Request) {
+			rows, err := state.DB.Query(context.Background(), "SELECT id, github_username, name, avatar_url, bio, techs FROM devs")
+			if err != nil {
+				sendError(w, 500, "Failed to fetch devs", "DATABASE_ERROR", err.Error())
+				return
 			}
-		}
-		state.Mutex.Unlock()
-
-		c.JSON(http.StatusCreated, gin.H{"message": "Point added"})
-	})
-
-	r.GET("/sse", func(c *gin.Context) {
-		clientID := c.Query("client_id")
-		if clientID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "client_id is required"})
-			return
-		}
-
-		state.Mutex.Lock()
-		ch, exists := state.SseChannels[clientID]
-		if !exists {
-			c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
-			state.Mutex.Unlock()
-			return
-		}
-		state.Mutex.Unlock()
-
-		c.Stream(func(w io.Writer) bool {
-			select {
-			case msg := <-ch:
-				c.SSEvent("message", msg)
-				return true
-			case <-time.After(15 * time.Second):
-				c.SSEvent("ping", "keep-alive")
-				return true
-			default:
-				return true
+...
+		v1.Post("/devs", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				GithubUsername string  `json:"github_username"`
+				Techs          string  `json:"techs"`
+				Latitude       float64 `json:"latitude"`
+				Longitude      float64 `json:"longitude"`
 			}
+			if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&req); err != nil {
+				sendError(w, 400, "Invalid request body", "INVALID_BODY", nil)
+				return
+			}
+...
+			githubRes, err := http.Get("https://api.github.com/users/" + req.GithubUsername)
+			if err != nil || githubRes.StatusCode != 200 {
+				sendError(w, 404, "GitHub user not found", "GITHUB_USER_NOT_FOUND", nil)
+				return
+			}
+
+			
+			techsArray := strings.Split(req.Techs, ",")
+			for i, t := range techsArray { techsArray[i] = strings.TrimSpace(t) }
+
+			name := ghData.Name
+			if name == "" { name = ghData.Login }
+
+			var id int
+			state.DB.QueryRow(context.Background(),
+				`INSERT INTO devs (github_username, name, avatar_url, bio, techs, location) 
+				 VALUES ($1, $2, $3, $4, $5, ST_MakePoint($6, $7)::geography) 
+				 RETURNING id`,
+				req.GithubUsername, name, ghData.AvatarURL, ghData.Bio, techsArray, req.Longitude, req.Latitude,
+			).Scan(&id)
+
+			w.WriteHeader(http.StatusCreated)
+			sonic.ConfigDefault.NewEncoder(w).Encode(map[string]int{"id": id})
+		})
+
+		v1.Get("/search", func(w http.ResponseWriter, r *http.Request) {
+			// Search implementation here...
 		})
 	})
 
-	r.Run(":9988")
-}
-
-func haversineDistance(lat1, lon1, lat2, lon2 float64) float64 {
-	toRadians := func(deg float64) float64 {
-		return deg * math.Pi / 180.0
-	}
-
-	lat1, lon1, lat2, lon2 = toRadians(lat1), toRadians(lon1), toRadians(lat2), toRadians(lon2)
-	dlat, dlon := lat2-lat1, lon2-lon1
-
-	a := math.Sin(dlat/2)*math.Sin(dlat/2) + math.Cos(lat1)*math.Cos(lat2)*math.Sin(dlon/2)*math.Sin(dlon/2)
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-	const earthRadiusKm = 6371.0
-	return earthRadiusKm * c
+	fmt.Println("🚀 Go Backend (V1) on :9988")
+	http.ListenAndServe(":9988", r)
 }

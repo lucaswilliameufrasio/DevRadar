@@ -5,6 +5,9 @@ import './Main.css';
 
 import DevItem from './components/DevItem';
 import DevForm from './components/DevForm';
+import { HttpClient } from './services/HttpClient';
+
+const httpClient = new HttpClient();
 
 type NewDeveloperInput = {
   github_username: string,
@@ -18,11 +21,8 @@ function App() {
 
   useEffect(() => {
     async function loadDevs() {
-      const response = await fetch('http://localhost:7777/devs');
-
-      const result = await response.json();
-
-      setDevs(result);
+      const response = await httpClient.request<any[]>({ path: 'devs' });
+      setDevs(response.body);
     }
 
     loadDevs();
@@ -31,21 +31,17 @@ function App() {
   async function handleAddDev(newDev: NewDeveloperInput) {
     console.debug("New dev information", newDev)
 
-    const response = await fetch('http://localhost:7777/devs', {
-      method: 'POST',
-      body: JSON.stringify(newDev),
-      headers: {
-        'Content-type': 'application/json'
-      }
-    })
+    try {
+      const response = await httpClient.request<any>({
+        path: 'devs',
+        method: 'POST',
+        body: newDev
+      });
 
-    if (!response.ok) {
-      return;
+      setDevs([...devs, response.body]);
+    } catch (error) {
+      console.error("Failed to add dev", error);
     }
-
-    const result = await response.json();
-
-    setDevs([...devs, result]);
   }
 
   return (
@@ -58,7 +54,7 @@ function App() {
       <main>
         <ul>
           {devs.map((dev) => (
-            <DevItem key={dev._id} dev={dev} />
+            <DevItem key={dev.id} dev={dev} />
           ))}
         </ul>
       </main>

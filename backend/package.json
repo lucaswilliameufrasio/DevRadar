@@ -4,14 +4,21 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/websocket": "^11.2.0",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.17.1",
-    "mongoose": "^8.9.4",
+    "fastify": "^5.8.2",
+    "knex": "^3.2.5",
+    "pg": "^8.20.0",
+    "pino": "^10.3.1",
+    "rbush": "^4.0.1",
     "socket.io": "^4.8.1"
   }
 }
