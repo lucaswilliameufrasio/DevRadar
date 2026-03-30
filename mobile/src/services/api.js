@@ -82,6 +82,14 @@ export class HttpClient {
         result = await interceptor(config, result);
       }
 
+      if (response.status === 429) {
+        throw new HttpClientError(
+          429,
+          'Too many requests. Please try again in a minute.',
+          'RATE_LIMIT_EXCEEDED'
+        );
+      }
+
       if (!response.ok) {
         const errorBody = result.body || {};
         throw new HttpClientError(

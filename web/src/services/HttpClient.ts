@@ -108,6 +108,14 @@ export class HttpClient {
         result = await interceptor<T>(config, result)
       }
 
+      if (response.status === 429) {
+        throw new HttpClientError(
+          429,
+          'Too many requests. Please try again in a minute.',
+          'RATE_LIMIT_EXCEEDED'
+        )
+      }
+
       if (!response.ok) {
         const errorBody = result.body as unknown as ApiErrorResponse;
         throw new HttpClientError(
