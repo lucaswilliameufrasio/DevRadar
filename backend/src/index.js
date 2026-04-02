@@ -18,7 +18,12 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 if (cluster.isPrimary) {
   const numCPUs = os.cpus().length;
-  for (let i = 0; i < numCPUs; i++) cluster.fork();
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+  cluster.on('exit', (worker) => {
+    cluster.fork();
+  });
 } else {
   startWorker();
 }
@@ -41,10 +46,15 @@ async function startWorker() {
         techs: techs ? techs.split(',').map(t => t.trim()) : []
       };
       tree.insert(item);
-      connection.socket.on('close', () => tree.remove(item));
+      connection.socket.on('close', () => {
+        tree.remove(item);
+      });
     });
 
-    v1.get('/devs', async () => (await pool.query('SELECT * FROM devs')).rows);
+    v1.get('/devs', async () => {
+      const result = await pool.query('SELECT * FROM devs');
+      return result.rows;
+    });
 
     // Schema Validation for registration
     const registrationSchema = {
@@ -99,7 +109,9 @@ async function startWorker() {
       const cacheKey = `search:${latitude}:${longitude}:${techs}`;
       
       const cached = await redis.get(cacheKey);
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        return JSON.parse(cached);
+      }
 
       const techsArray = techs.split(',').map(t => t.trim());
       
@@ -124,7 +136,9 @@ async function startWorker() {
     const errorCode = error.code || 'INTERNAL_SERVER_ERROR';
     
     // Log for server-side debugging
-    if (statusCode >= 500) console.error(error);
+    if (statusCode >= 500) {
+      console.error(error);
+    }
 
     reply.status(statusCode).send({
       message: error.message || 'Internal Server Error',

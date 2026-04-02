@@ -4,8 +4,6 @@ const parseStringAsArray = require('../utils/parseStringAsArray');
 const getDevInformation = require('../utils/getDevInformation');
 const { findConnections, sendMessage } = require('../websocket');
 
-//index: quando quero mostrar uma lista, show: quando quero mostrar um único registro, store: quando quero criar um registro, update: alterar registro,
-//destroy: deletar um registro
 module.exports = {
     async index(req, res) {
         const devs = await Dev.find();
@@ -61,9 +59,7 @@ module.exports = {
     },
 
     async update(req, res) {
-        //Atualizar nome, avatar, bio e localização
         const { latitude, longitude } = req.body;
-
         const { dev_id } = req.params;
 
         let dev = await Dev.findById(dev_id);
@@ -73,9 +69,7 @@ module.exports = {
         }
 
         const { github_username } = dev;
-
         const apiResponse = await getDevInformation(github_username);
-
         const { name = login, avatar_url, bio } = apiResponse.data;
 
         const location = {
@@ -99,7 +93,6 @@ module.exports = {
 
     async destroy(req, res) {
         const { dev_id } = req.params;
-
         const dev = await Dev.findById(dev_id);
 
         if (!dev) {

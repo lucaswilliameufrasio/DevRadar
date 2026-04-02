@@ -84,7 +84,9 @@ export class HttpClient {
     }
 
     const abortController = new AbortController()
-    const timeoutId = setTimeout(() => abortController.abort(), config.timeout)
+    const timeoutId = setTimeout(() => {
+      abortController.abort()
+    }, config.timeout)
 
     try {
       const response = await this.executor(url.toString(), {

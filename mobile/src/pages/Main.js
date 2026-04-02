@@ -54,11 +54,9 @@ function Main({ navigation }) {
         subscribeToNewDevs((developer) => {
             console.debug('New developer in the house', developer)
 
-            if (!developer) {
-                return
+            if (developer) {
+                setDevelopers([...developers, developer]);
             }
-
-            setDevelopers([...developers, developer])
         }
         );
     }, [developers]);
@@ -108,7 +106,11 @@ function Main({ navigation }) {
     }
 
     if (!currentRegion) {
-        return <Text>Algo de errado não está certo</Text>;
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>Algo de errado não está certo</Text>
+            </View>
+        );
     }
 
     return (

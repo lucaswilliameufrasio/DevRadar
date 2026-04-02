@@ -23,19 +23,18 @@ exports.setupWebsocket = (server) => {
 
 };
 
-//some() retorna true, caso uma das condições seja verdadeira. 
-//O método includes() determina se um array contém um determinado elemento, retornando true ou false apropriadamente. ~MDN web docs
-
 exports.findConnections = (coordinates, techs) => {
     return connections.filter(connection => {
-        return calculateDistance(coordinates, connection.coordinates) < 10
-            && connection.techs.some(item => techs.includes(item))
+        if (calculateDistance(coordinates, connection.coordinates) < 10 && connection.techs.some(item => techs.includes(item))) {
+            return true;
+        }
+        return false;
     });
 };
 
 exports.sendMessage = (to, message, data) => {
-    to.forEach(connection => {
+    for (const connection of to) {
         console.debug('Sending message to connection', connection, message, data)
         io.to(connection.id).emit(message, data);
-    });
+    }
 };

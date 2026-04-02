@@ -1,6 +1,21 @@
 # Makefile for DevRadar Performant Backends
 
-.PHONY: test-rust test-go test-node test-all load-test-rust load-test-go load-test-node
+.PHONY: test-rust test-go test-node test-all load-test-rust load-test-go load-test-node migrate-make-node migrate-make-go migrate-make-rust
+
+# ... existing test targets ...
+
+# Migration creation targets
+migrate-make-node:
+	@read -p "Migration name: " name; \
+	cd backend && npx knex migrate:make $$name
+
+migrate-make-go:
+	@read -p "Migration name: " name; \
+	cd backend-golang && goose -dir migrations create $$name sql
+
+migrate-make-rust:
+	@read -p "Migration name: " name; \
+	cd backend-rust && sqlx migrate add $$name
 
 test-rust:
 	@echo "🧪 Running Rust (Axum) tests..."
